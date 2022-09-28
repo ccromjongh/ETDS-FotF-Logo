@@ -60,16 +60,29 @@ void setup() {
     /// Initialize network stuff here
 }
 
+/**
+ * Map a piece of virtual LED strip to a physical one
+ * @param mapping The mapping information
+ */
 void map_leds(struct StripMapping mapping) {
-    for (auto i = mapping.Physical.begin; i < mapping.Physical.end; i++) {
-        // Do the interpolation
-    }
+    const int virtual_length = mapping.Virtual.end-mapping.Virtual.begin;
+    const int physical_length = mapping.Physical.end-mapping.Physical.begin;
 
-    // The fill_gradient function does something related to what we need, and very efficient with fixed point numbers
-    // Can be used for inspiration, but let's go for an easy solution first.
-    CHSV c1 = CHSV(0, 200, 255);
-    CHSV c2 = CHSV(50, 200, 255);
-    fill_gradient(real_leds[0], mapping.Physical.begin, c1, mapping.Physical.end, c2);
+    for (auto i = mapping.Physical.begin; i < mapping.Physical.end; i++) {
+        // Calculate which LED we start interpolating at
+        int start = i * virtual_length / physical_length;
+        // Calculate the ratio for interpolating
+        // Not sure if this should be 255 or 256. Normally it would be 255 but this is rounded math, and the blend function uses 256 too.
+        uint8_t remainder = (256 * i * virtual_length / physical_length) - 256 * start;
+
+        // We must make sure there is no out-of-bounds here...
+        int end = start >= virtual_length ? start : start + 1;
+        auto c1 = virtual_leds[start];
+        auto c2 = virtual_leds[end];
+
+        // Do the interpolation
+        virtual_leds[mapping.strip][i] = blend(c1, c2, remainder);
+    }
 }
 
 void loop() {
@@ -80,4 +93,7 @@ void loop() {
         // Write mapping here
         map_leds(mapping);
     }
+
+    FastLED.show();
+    FastLED.delay(1000/FRAMES_PER_SECOND);
 }
