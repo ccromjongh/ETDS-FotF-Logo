@@ -84,11 +84,22 @@ void loop() {
     parse_serial();
 
     /** Receive/create the colors for the virtual strip here **/
-
-    /** Map the virtual strips to the real strips **/
-    for (auto mapping: mappings) {
-        // Write mapping here
-        map_leds(mapping);
+    // In mode 0, show the selected LED positions for easy mapping
+    if (mode == 0) {
+        for (int i = 0; i < NUM_STRANDS; ++i) {
+            // Fill everything with black, except the selected pixel positions
+            fill_solid(real_leds[i], physical_sizes[i], CRGB::Black);
+            // The selected strand gets extra saturation
+            real_leds[i][positions[i]] = CHSV(i * 30, i == selected ? 255 : 100, 255);
+        }
+    }
+    // In mode 1, do the mapping. No input here yet.
+    if (mode == 1) {
+        /** Map the virtual strips to the real strips **/
+        for (auto mapping: mappings) {
+            // Write mapping here
+            map_leds(mapping);
+        }
     }
 
     FastLED.show();
@@ -125,6 +136,9 @@ void parse_serial() {
         } else if (strcmp(input_buffer, left) == 0) {
             // Serial << "Left detected!" << endl;
             selected = pos_mod(selected-1, NUM_STRANDS);
+        } else if (strcmp(input_buffer, "m") == 0) {
+            mode = pos_mod(mode+1, 2);
+            Serial << "Mode is now " << mode << endl;
         } else {
             Serial << "Input detected: ";
             for (int i = 0; i < strlen(input_buffer); ++i) {
